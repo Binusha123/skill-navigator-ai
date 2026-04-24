@@ -229,6 +229,9 @@ const Dashboard = () => {
                 ))}
               </div>
             </div>
+              <SkillConfidenceCard items={confidence} />
+            </div>
+
 
             {/* Gap analysis */}
             <div className="grid gap-4 md:grid-cols-3">
