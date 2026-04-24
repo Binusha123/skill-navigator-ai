@@ -179,6 +179,13 @@ const Dashboard = () => {
 
         {step === "results" && (
           <div className="space-y-6">
+            {/* Top: Job Readiness */}
+            <JobReadinessCard
+              score={calculateJobReadiness(results)}
+              missingCount={missing.length}
+              weakCount={weak.length}
+            />
+
             {/* Overall scorecard */}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="card-glass rounded-2xl p-6">
@@ -195,7 +202,8 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Skill scores */}
+            {/* Middle: Skill Breakdown + Confidence */}
+            <div className="grid gap-6 lg:grid-cols-2">
             <div className="card-glass rounded-2xl p-6">
               <h2 className="mb-6 font-display text-xl font-semibold">Skill Breakdown</h2>
               <div className="space-y-5">
