@@ -1,0 +1,4 @@
+project_id = "gfidufkeoykeobyjommq"
+
+[functions.ai-agent]
+verify_jwt = false
