@@ -36,6 +36,39 @@ export const generateMockResults = (answers: Record<string, string>): SkillScore
   });
 };
 
+export interface SkillConfidence {
+  skill: string;
+  confidence: number; // 0-100
+}
+
+// Mock "claimed" levels from resume — in real app would parse the resume
+const claimedLevels: Record<string, number> = {
+  React: 90,
+  JavaScript: 90,
+  TypeScript: 85,
+  "System Design": 75,
+  SQL: 80,
+  "REST APIs": 85,
+};
+
+export const generateSkillConfidence = (results: SkillScore[]): SkillConfidence[] => {
+  return results.map((r) => {
+    const claimed = claimedLevels[r.skill] ?? 80;
+    // Confidence = how well assessed score backs up the claim
+    const confidence = Math.min(100, Math.max(10, Math.round((r.score / claimed) * 100)));
+    return { skill: r.skill, confidence };
+  });
+};
+
+export const calculateJobReadiness = (results: SkillScore[]): number => {
+  if (!results.length) return 0;
+  const avgRatio =
+    results.reduce((sum, r) => sum + Math.min(1, r.score / r.required), 0) / results.length;
+  const missingPenalty = results.filter((r) => r.score < 40).length * 5;
+  const score = Math.round(avgRatio * 100 - missingPenalty);
+  return Math.max(15, Math.min(98, score));
+};
+
 export interface LearningWeek {
   week: number;
   focus: string;

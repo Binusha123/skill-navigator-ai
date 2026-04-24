@@ -8,7 +8,9 @@ import { Progress } from "@/components/ui/progress";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { auth } from "@/lib/auth";
-import { mockQuestions, generateMockResults, generateLearningPlan, type SkillScore, type LearningWeek } from "@/lib/mockData";
+import { mockQuestions, generateMockResults, generateLearningPlan, generateSkillConfidence, calculateJobReadiness, type SkillScore, type LearningWeek, type SkillConfidence } from "@/lib/mockData";
+import JobReadinessCard from "@/components/JobReadinessCard";
+import SkillConfidenceCard from "@/components/SkillConfidenceCard";
 import { toast } from "sonner";
 
 type Step = "upload" | "assessment" | "results";
@@ -21,6 +23,7 @@ const Dashboard = () => {
   const [jd, setJd] = useState("");
   const [answers, setAnswers] = useState<Record<string, string>>({});
   const [results, setResults] = useState<SkillScore[]>([]);
+  const [confidence, setConfidence] = useState<SkillConfidence[]>([]);
   const [plan, setPlan] = useState<LearningWeek[]>([]);
 
   useEffect(() => {
@@ -39,6 +42,7 @@ const Dashboard = () => {
     if (answered < 3) return toast.error("Please answer at least 3 questions thoughtfully");
     const r = generateMockResults(answers);
     setResults(r);
+    setConfidence(generateSkillConfidence(r));
     setPlan(generateLearningPlan(r));
     setStep("results");
   };
@@ -175,6 +179,13 @@ const Dashboard = () => {
 
         {step === "results" && (
           <div className="space-y-6">
+            {/* Top: Job Readiness */}
+            <JobReadinessCard
+              score={calculateJobReadiness(results)}
+              missingCount={missing.length}
+              weakCount={weak.length}
+            />
+
             {/* Overall scorecard */}
             <div className="grid gap-4 md:grid-cols-3">
               <div className="card-glass rounded-2xl p-6">
@@ -191,7 +202,8 @@ const Dashboard = () => {
               </div>
             </div>
 
-            {/* Skill scores */}
+            {/* Middle: Skill Breakdown + Confidence */}
+            <div className="grid gap-6 lg:grid-cols-2">
             <div className="card-glass rounded-2xl p-6">
               <h2 className="mb-6 font-display text-xl font-semibold">Skill Breakdown</h2>
               <div className="space-y-5">
@@ -217,6 +229,9 @@ const Dashboard = () => {
                 ))}
               </div>
             </div>
+              <SkillConfidenceCard items={confidence} />
+            </div>
+
 
             {/* Gap analysis */}
             <div className="grid gap-4 md:grid-cols-3">
