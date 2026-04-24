@@ -1,8 +1,9 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
-import { Brain, LogOut } from "lucide-react";
+import { LogOut } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { auth } from "@/lib/auth";
 import { useEffect, useState } from "react";
+import logo from "@/assets/skillora-logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
@@ -23,9 +24,7 @@ const Navbar = () => {
     <header className="sticky top-0 z-50 border-b border-border/50 bg-background/70 backdrop-blur-xl">
       <div className="container flex h-16 items-center justify-between">
         <Link to="/" className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-xl gradient-bg">
-            <Brain className="h-5 w-5 text-primary-foreground" />
-          </div>
+          <img src={logo} alt="Skillora AI logo" className="h-9 w-9 rounded-xl object-contain bg-white/95 p-1" />
           <span className="font-display text-xl font-bold">
             Skillora <span className="gradient-text">AI</span>
           </span>

@@ -1,12 +1,10 @@
-import { Brain } from "lucide-react";
+import logo from "@/assets/skillora-logo.png";
 
 const Footer = () => (
   <footer className="border-t border-border/50 py-10">
     <div className="container flex flex-col items-center justify-between gap-4 md:flex-row">
       <div className="flex items-center gap-2">
-        <div className="flex h-7 w-7 items-center justify-center rounded-lg gradient-bg">
-          <Brain className="h-4 w-4 text-primary-foreground" />
-        </div>
+        <img src={logo} alt="Skillora AI logo" className="h-7 w-7 rounded-lg object-contain bg-white/95 p-0.5" />
         <span className="text-sm text-muted-foreground">© 2026 Skillora AI. Prove your skills. Plan your growth.</span>
       </div>
       <div className="flex gap-6 text-sm text-muted-foreground">
