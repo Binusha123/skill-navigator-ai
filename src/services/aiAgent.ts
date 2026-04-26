@@ -46,6 +46,27 @@ export interface ConfidenceItem {
   skill: string;
   confidence: number;
 }
+export interface ResumeValidation {
+  is_resume: boolean;
+  confidence: number;
+  reason: string;
+  detected_sections: string[];
+}
+export interface ResumeEnhancementChange {
+  section: string;
+  issue: string;
+  suggestion: string;
+  example: string;
+}
+export interface ResumeEnhancement {
+  overall_summary: string;
+  alignment_score: number;
+  strengths: string[];
+  weaknesses: string[];
+  missing_keywords: string[];
+  suggested_changes: ResumeEnhancementChange[];
+  rewritten_summary: string;
+}
 
 async function callAgent<T>(step: string, payload: unknown): Promise<T> {
   const { data, error } = await supabase.functions.invoke("ai-agent", {
@@ -95,4 +116,8 @@ export const aiAgent = {
       claimed_skills: resume.skills,
       evaluations,
     }),
+  validateResume: (resume_text: string) =>
+    callAgent<ResumeValidation>("validate_resume", { resume_text }),
+  enhanceResume: (resume_text: string, jd_text: string) =>
+    callAgent<ResumeEnhancement>("enhance_resume", { resume_text, jd_text }),
 };

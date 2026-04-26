@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Loader2, Sparkles, Target, TrendingUp, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Upload, Wand2, XCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,6 +19,7 @@ import {
   type JobReadiness,
   type LearningWeek,
   type ResumeData,
+  type ResumeEnhancement,
   type SkillEvaluation,
   type SkillMapping,
 } from "@/services/aiAgent";
@@ -67,7 +68,10 @@ const Dashboard = () => {
   // Loading
   const [stage, setStage] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumeInvalid, setResumeInvalid] = useState<string | null>(null);
+  const [enhancement, setEnhancement] = useState<ResumeEnhancement | null>(null);
 
   // Load past assessment when ?id= is present
   useEffect(() => {
@@ -132,11 +136,43 @@ const Dashboard = () => {
   const handleFile = async (f: File) => {
     setResumeName(f.name);
     setResumeFile(f);
+    setResumeInvalid(null);
     try {
       const text = await f.text();
       setResumeText(text.slice(0, 12000));
     } catch {
       toast.error("Could not read file. Try pasting your resume content into the field below.");
+    }
+  };
+
+  // Quick client-side heuristic — catches obvious non-resumes before calling the AI
+  const looksLikeResume = (text: string): { ok: boolean; reason?: string } => {
+    const t = text.toLowerCase();
+    if (t.trim().length < 200) return { ok: false, reason: "The document is too short to be a resume (min ~200 characters)." };
+    const sectionKeywords = ["experience", "education", "skills", "projects", "summary", "objective", "work history", "certifications", "employment"];
+    const hits = sectionKeywords.filter((k) => t.includes(k)).length;
+    const hasEmail = /[\w.+-]+@[\w-]+\.[\w.-]+/.test(t);
+    const hasPhone = /(\+?\d[\d\s().-]{7,})/.test(t);
+    if (hits < 2 && !hasEmail && !hasPhone) {
+      return { ok: false, reason: "We could not detect typical resume sections (experience, education, skills) or contact info." };
+    }
+    return { ok: true };
+  };
+
+  const validateResumeStrict = async (text: string) => {
+    // Layer 1: heuristic
+    const h = looksLikeResume(text);
+    if (!h.ok) return { ok: false, reason: h.reason! };
+    // Layer 2: AI validation
+    try {
+      const v = await aiAgent.validateResume(text);
+      if (!v.is_resume || v.confidence < 50) {
+        return { ok: false, reason: v.reason || "The AI could not recognize this as a resume." };
+      }
+      return { ok: true };
+    } catch {
+      // If AI validation fails, fall back to heuristic pass
+      return { ok: true };
     }
   };
 
@@ -146,7 +182,18 @@ const Dashboard = () => {
 
     setLoading(true);
     setError(null);
+    setResumeInvalid(null);
     try {
+      setStage("Validating resume…");
+      const v = await validateResumeStrict(resumeText || resumeName);
+      if (!v.ok) {
+        setResumeInvalid(v.reason || "This document does not appear to be a resume.");
+        toast.error("Invalid resume document");
+        setLoading(false);
+        setStage("");
+        return;
+      }
+
       // Optional: upload resume file to private storage
       let resume_file_path: string | null = null;
       if (resumeFile) {
@@ -199,6 +246,39 @@ const Dashboard = () => {
       toast.error(msg);
     } finally {
       setLoading(false);
+      setStage("");
+    }
+  };
+
+  const runEnhance = async () => {
+    if (!resumeText && !resumeName) return toast.error("Please upload your resume first");
+    if (jd.trim().length < 30) return toast.error("Please paste the job description first");
+
+    setEnhancing(true);
+    setError(null);
+    setResumeInvalid(null);
+    setEnhancement(null);
+    try {
+      setStage("Validating resume…");
+      const v = await validateResumeStrict(resumeText || resumeName);
+      if (!v.ok) {
+        setResumeInvalid(v.reason || "This document does not appear to be a resume.");
+        toast.error("Invalid resume document");
+        return;
+      }
+      setStage("Analyzing resume vs job description…");
+      const result = await aiAgent.enhanceResume(resumeText || resumeName, jd);
+      setEnhancement(result);
+      toast.success("Resume enhancement ready!");
+      setTimeout(() => {
+        document.getElementById("resume-enhancement")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setEnhancing(false);
       setStage("");
     }
   };
@@ -269,6 +349,8 @@ const Dashboard = () => {
     setPlan([]);
     setReadiness(null);
     setConfidence([]);
+    setEnhancement(null);
+    setResumeInvalid(null);
     setSearchParams({});
   };
 
@@ -409,12 +491,136 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
-              <Button variant="hero" size="xl" className="w-full" onClick={runIntake} disabled={loading}>
+            {resumeInvalid && (
+              <div className="lg:col-span-2 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 text-sm">
+                    <div className="font-semibold text-destructive">This document doesn't look like a resume</div>
+                    <p className="mt-1 text-muted-foreground">{resumeInvalid}</p>
+                    <div className="mt-3 rounded-xl border border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
+                      <div className="mb-2 font-semibold text-foreground">A valid resume should include:</div>
+                      <ul className="ml-4 list-disc space-y-1">
+                        <li><span className="text-foreground">Contact info</span> — full name, email, phone, location</li>
+                        <li><span className="text-foreground">Professional summary</span> — 2–4 sentences about your background</li>
+                        <li><span className="text-foreground">Work experience</span> — company, role, dates, bullet achievements</li>
+                        <li><span className="text-foreground">Education</span> — degree, institution, graduation year</li>
+                        <li><span className="text-foreground">Skills</span> — technical and soft skills relevant to your field</li>
+                        <li><span className="text-foreground">Projects / Certifications</span> (optional but recommended)</li>
+                      </ul>
+                      <div className="mt-2">Tip: Plain text (.txt) or pasting the resume content directly works best.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="lg:col-span-2 grid gap-3 sm:grid-cols-2">
+              <Button variant="hero" size="xl" className="w-full" onClick={runIntake} disabled={loading || enhancing}>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                 Generate My AI Assessment
               </Button>
+              <Button variant="outline" size="xl" className="w-full" onClick={runEnhance} disabled={loading || enhancing}>
+                {enhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                Enhance My Resume
+              </Button>
             </div>
+
+            {enhancement && (
+              <div id="resume-enhancement" className="lg:col-span-2 space-y-5">
+                <div className="card-glass rounded-2xl p-6">
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="h-5 w-5 text-primary" />
+                      <h2 className="font-display text-xl font-semibold">Resume Enhancement Report</h2>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">JD Alignment</div>
+                      <div className={`font-display text-3xl font-bold ${enhancement.alignment_score >= 70 ? "text-success" : enhancement.alignment_score >= 40 ? "text-warning" : "text-destructive"}`}>
+                        {enhancement.alignment_score}<span className="text-base text-muted-foreground">/100</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{enhancement.overall_summary}</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2 text-success">
+                      <CheckCircle2 className="h-5 w-5" />
+                      <h3 className="font-semibold">Strengths</h3>
+                    </div>
+                    <ul className="space-y-1.5 text-sm">
+                      {enhancement.strengths.map((s) => (
+                        <li key={s} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2 text-warning">
+                      <AlertTriangle className="h-5 w-5" />
+                      <h3 className="font-semibold">Weaknesses</h3>
+                    </div>
+                    <ul className="space-y-1.5 text-sm">
+                      {enhancement.weaknesses.map((s) => (
+                        <li key={s} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-warning" /> {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {enhancement.missing_keywords.length > 0 && (
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">Missing Keywords from the Job Description</h3>
+                    </div>
+                    <p className="mb-3 text-xs text-muted-foreground">Add these naturally into your resume to pass ATS filters.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {enhancement.missing_keywords.map((k) => (
+                        <span key={k} className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">{k}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="card-glass rounded-2xl p-6">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-primary" />
+                    <h3 className="font-display text-lg font-semibold">Suggested Changes</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {enhancement.suggested_changes.map((c, idx) => (
+                      <div key={idx} className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-semibold text-primary">{c.section}</span>
+                        </div>
+                        <p className="text-sm font-medium">{c.issue}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{c.suggestion}</p>
+                        {c.example && (
+                          <div className="mt-3 rounded-xl border border-secondary/30 bg-secondary/5 p-3 text-sm">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-secondary">Example</div>
+                            <p className="text-foreground/90">{c.example}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {enhancement.rewritten_summary && (
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">Polished Professional Summary</h3>
+                    </div>
+                    <p className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-relaxed">{enhancement.rewritten_summary}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 

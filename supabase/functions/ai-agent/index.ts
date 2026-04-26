@@ -16,7 +16,9 @@ type Step =
   | "gap_analysis"
   | "learning_plan"
   | "job_readiness"
-  | "skill_confidence";
+  | "skill_confidence"
+  | "validate_resume"
+  | "enhance_resume";
 
 interface ToolSpec {
   name: string;
@@ -203,6 +205,56 @@ const tools: Record<Step, ToolSpec> = {
       additionalProperties: false,
     },
   },
+  validate_resume: {
+    name: "return_validation",
+    description: "Determine if the input text is a real resume/CV",
+    parameters: {
+      type: "object",
+      properties: {
+        is_resume: { type: "boolean" },
+        confidence: { type: "number", description: "0-100 confidence that input is a resume" },
+        reason: { type: "string", description: "Short explanation of why or why not" },
+        detected_sections: {
+          type: "array",
+          items: { type: "string" },
+          description: "Resume sections found e.g. experience, education, skills, projects, contact",
+        },
+      },
+      required: ["is_resume", "confidence", "reason", "detected_sections"],
+      additionalProperties: false,
+    },
+  },
+  enhance_resume: {
+    name: "return_enhancement",
+    description: "Analyze resume against job description and return concrete improvements",
+    parameters: {
+      type: "object",
+      properties: {
+        overall_summary: { type: "string", description: "2-3 sentence high-level assessment" },
+        alignment_score: { type: "number", description: "0-100 how well resume aligns with JD" },
+        strengths: { type: "array", items: { type: "string" } },
+        weaknesses: { type: "array", items: { type: "string" } },
+        missing_keywords: { type: "array", items: { type: "string" }, description: "ATS keywords from JD missing in resume" },
+        suggested_changes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              section: { type: "string", description: "e.g. Summary, Experience, Skills, Projects, Education" },
+              issue: { type: "string", description: "What's wrong or missing" },
+              suggestion: { type: "string", description: "Concrete actionable rewrite or addition" },
+              example: { type: "string", description: "Example sentence/bullet they can paste" },
+            },
+            required: ["section", "issue", "suggestion", "example"],
+            additionalProperties: false,
+          },
+        },
+        rewritten_summary: { type: "string", description: "A polished professional summary tailored to the JD" },
+      },
+      required: ["overall_summary", "alignment_score", "strengths", "weaknesses", "missing_keywords", "suggested_changes", "rewritten_summary"],
+      additionalProperties: false,
+    },
+  },
 };
 
 const systemPrompts: Record<Step, string> = {
@@ -215,6 +267,8 @@ const systemPrompts: Record<Step, string> = {
   learning_plan: "Build a focused 4-week plan to close the listed skill gaps. Each week targets ONE primary skill, has 3-5 actionable tasks, 3 high-quality resources (use real, well-known URLs like official docs, freeCodeCamp, MDN, frontendmasters.com, youtube.com), and an hours estimate (6-12).",
   job_readiness: "Compute an overall job readiness percentage (0-100) based on how well the candidate's scores meet the required thresholds, with penalties for missing skills. Return a one-sentence insight.",
   skill_confidence: "For each evaluated skill, compute a confidence score (0-100) measuring how well the assessed performance backs up what the resume claimed. Higher = candidate demonstrated what they claimed.",
+  validate_resume: "You are a strict resume validator. Decide if the input text is a real resume/CV. A resume should contain: a name/contact info, work experience or projects, skills, and/or education. Reject random text, articles, code, lyrics, marketing copy, or job descriptions. Return is_resume=false with confidence and a clear reason if it is not a resume. List the resume sections you actually detected.",
+  enhance_resume: "You are an expert technical recruiter and resume coach. Compare the candidate's resume to the target job description. Identify alignment gaps, missing ATS keywords, weak bullet points, and areas to strengthen. Provide 5-8 concrete, actionable suggested_changes — each tied to a specific resume section with a concrete example bullet/sentence the user can paste. Also produce a polished rewritten_summary tailored to the JD (2-4 sentences).",
 };
 
 async function runStep(step: Step, userPayload: unknown): Promise<unknown> {
