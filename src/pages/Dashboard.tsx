@@ -491,12 +491,136 @@ const Dashboard = () => {
               />
             </div>
 
-            <div className="lg:col-span-2">
-              <Button variant="hero" size="xl" className="w-full" onClick={runIntake} disabled={loading}>
+            {resumeInvalid && (
+              <div className="lg:col-span-2 rounded-2xl border border-destructive/40 bg-destructive/5 p-5">
+                <div className="flex items-start gap-3">
+                  <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-destructive/15 text-destructive">
+                    <AlertTriangle className="h-5 w-5" />
+                  </div>
+                  <div className="flex-1 text-sm">
+                    <div className="font-semibold text-destructive">This document doesn't look like a resume</div>
+                    <p className="mt-1 text-muted-foreground">{resumeInvalid}</p>
+                    <div className="mt-3 rounded-xl border border-border/60 bg-muted/30 p-4 text-xs text-muted-foreground">
+                      <div className="mb-2 font-semibold text-foreground">A valid resume should include:</div>
+                      <ul className="ml-4 list-disc space-y-1">
+                        <li><span className="text-foreground">Contact info</span> — full name, email, phone, location</li>
+                        <li><span className="text-foreground">Professional summary</span> — 2–4 sentences about your background</li>
+                        <li><span className="text-foreground">Work experience</span> — company, role, dates, bullet achievements</li>
+                        <li><span className="text-foreground">Education</span> — degree, institution, graduation year</li>
+                        <li><span className="text-foreground">Skills</span> — technical and soft skills relevant to your field</li>
+                        <li><span className="text-foreground">Projects / Certifications</span> (optional but recommended)</li>
+                      </ul>
+                      <div className="mt-2">Tip: Plain text (.txt) or pasting the resume content directly works best.</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <div className="lg:col-span-2 grid gap-3 sm:grid-cols-2">
+              <Button variant="hero" size="xl" className="w-full" onClick={runIntake} disabled={loading || enhancing}>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
                 Generate My AI Assessment
               </Button>
+              <Button variant="outline" size="xl" className="w-full" onClick={runEnhance} disabled={loading || enhancing}>
+                {enhancing ? <Loader2 className="h-5 w-5 animate-spin" /> : <Wand2 className="h-5 w-5" />}
+                Enhance My Resume
+              </Button>
             </div>
+
+            {enhancement && (
+              <div id="resume-enhancement" className="lg:col-span-2 space-y-5">
+                <div className="card-glass rounded-2xl p-6">
+                  <div className="mb-4 flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-2">
+                      <Wand2 className="h-5 w-5 text-primary" />
+                      <h2 className="font-display text-xl font-semibold">Resume Enhancement Report</h2>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs uppercase tracking-wide text-muted-foreground">JD Alignment</div>
+                      <div className={`font-display text-3xl font-bold ${enhancement.alignment_score >= 70 ? "text-success" : enhancement.alignment_score >= 40 ? "text-warning" : "text-destructive"}`}>
+                        {enhancement.alignment_score}<span className="text-base text-muted-foreground">/100</span>
+                      </div>
+                    </div>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{enhancement.overall_summary}</p>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-2">
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2 text-success">
+                      <CheckCircle2 className="h-5 w-5" />
+                      <h3 className="font-semibold">Strengths</h3>
+                    </div>
+                    <ul className="space-y-1.5 text-sm">
+                      {enhancement.strengths.map((s) => (
+                        <li key={s} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-success" /> {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2 text-warning">
+                      <AlertTriangle className="h-5 w-5" />
+                      <h3 className="font-semibold">Weaknesses</h3>
+                    </div>
+                    <ul className="space-y-1.5 text-sm">
+                      {enhancement.weaknesses.map((s) => (
+                        <li key={s} className="flex items-start gap-2"><ChevronRight className="mt-0.5 h-4 w-4 shrink-0 text-warning" /> {s}</li>
+                      ))}
+                    </ul>
+                  </div>
+                </div>
+
+                {enhancement.missing_keywords.length > 0 && (
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Target className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">Missing Keywords from the Job Description</h3>
+                    </div>
+                    <p className="mb-3 text-xs text-muted-foreground">Add these naturally into your resume to pass ATS filters.</p>
+                    <div className="flex flex-wrap gap-2">
+                      {enhancement.missing_keywords.map((k) => (
+                        <span key={k} className="rounded-full bg-destructive/10 px-3 py-1 text-xs font-medium text-destructive">{k}</span>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="card-glass rounded-2xl p-6">
+                  <div className="mb-4 flex items-center gap-2">
+                    <Lightbulb className="h-5 w-5 text-primary" />
+                    <h3 className="font-display text-lg font-semibold">Suggested Changes</h3>
+                  </div>
+                  <div className="space-y-4">
+                    {enhancement.suggested_changes.map((c, idx) => (
+                      <div key={idx} className="rounded-2xl border border-border/60 bg-muted/20 p-4">
+                        <div className="mb-2 flex items-center gap-2">
+                          <span className="rounded-full bg-primary/15 px-2.5 py-0.5 text-xs font-semibold text-primary">{c.section}</span>
+                        </div>
+                        <p className="text-sm font-medium">{c.issue}</p>
+                        <p className="mt-1 text-sm text-muted-foreground">{c.suggestion}</p>
+                        {c.example && (
+                          <div className="mt-3 rounded-xl border border-secondary/30 bg-secondary/5 p-3 text-sm">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-secondary">Example</div>
+                            <p className="text-foreground/90">{c.example}</p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {enhancement.rewritten_summary && (
+                  <div className="card-glass rounded-2xl p-6">
+                    <div className="mb-3 flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 text-primary" />
+                      <h3 className="font-semibold">Polished Professional Summary</h3>
+                    </div>
+                    <p className="rounded-xl border border-primary/30 bg-primary/5 p-4 text-sm leading-relaxed">{enhancement.rewritten_summary}</p>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
