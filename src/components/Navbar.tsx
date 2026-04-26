@@ -1,22 +1,15 @@
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { LogOut } from "lucide-react";
+import { Link, useNavigate } from "react-router-dom";
+import { LogOut, ShieldCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { auth } from "@/lib/auth";
-import { useEffect, useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 import logo from "@/assets/skillora-logo.png";
 
 const Navbar = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const [user, setUser] = useState(auth.current());
+  const { user, isAdmin, signOut } = useAuth();
 
-  useEffect(() => {
-    setUser(auth.current());
-  }, [location.pathname]);
-
-  const handleLogout = () => {
-    auth.logout();
-    setUser(null);
+  const handleLogout = async () => {
+    await signOut();
     navigate("/");
   };
 
@@ -39,6 +32,11 @@ const Navbar = () => {
         <div className="flex items-center gap-3">
           {user ? (
             <>
+              {isAdmin && (
+                <Button variant="ghost" size="sm" onClick={() => navigate("/admin")}>
+                  <ShieldCheck className="mr-1 h-4 w-4" /> Admin
+                </Button>
+              )}
               <Button variant="glass" size="sm" onClick={() => navigate("/dashboard")}>
                 Dashboard
               </Button>

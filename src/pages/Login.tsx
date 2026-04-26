@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { Brain } from "lucide-react";
+import { Brain, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -11,13 +11,22 @@ const Login = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!email || !password) return toast.error("Please fill in all fields");
-    auth.login(email, password);
-    toast.success("Welcome back!");
-    navigate("/dashboard");
+    setLoading(true);
+    try {
+      await auth.login(email, password);
+      toast.success("Welcome back!");
+      navigate("/dashboard");
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : "Login failed";
+      toast.error(msg);
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -38,13 +47,15 @@ const Login = () => {
         <form onSubmit={onSubmit} className="mt-8 space-y-4">
           <div className="space-y-2">
             <Label htmlFor="email">Email</Label>
-            <Input id="email" type="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
+            <Input id="email" type="email" autoComplete="email" placeholder="you@example.com" value={email} onChange={(e) => setEmail(e.target.value)} />
           </div>
           <div className="space-y-2">
             <Label htmlFor="password">Password</Label>
-            <Input id="password" type="password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <Input id="password" type="password" autoComplete="current-password" placeholder="••••••••" value={password} onChange={(e) => setPassword(e.target.value)} />
           </div>
-          <Button type="submit" variant="hero" size="lg" className="w-full">Log in</Button>
+          <Button type="submit" variant="hero" size="lg" className="w-full" disabled={loading}>
+            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : "Log in"}
+          </Button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted-foreground">

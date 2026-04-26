@@ -1,29 +1,48 @@
-// Mock auth — placeholder for future Supabase integration
-export interface User {
-  name: string;
+// Real Supabase auth — replaces the previous localStorage mock.
+// Kept under the same import path for backward compatibility.
+// Prefer the `useAuth` hook in components for reactive state.
+import { supabase } from "@/integrations/supabase/client";
+
+export interface AppUser {
+  id: string;
   email: string;
+  name: string;
 }
 
-const KEY = "skillora_user";
+const userFromSupabase = (u: { id: string; email?: string | null; user_metadata?: Record<string, unknown> } | null): AppUser | null => {
+  if (!u) return null;
+  const meta = (u.user_metadata ?? {}) as { display_name?: string };
+  return {
+    id: u.id,
+    email: u.email ?? "",
+    name: meta.display_name || (u.email ? u.email.split("@")[0] : "User"),
+  };
+};
 
 export const auth = {
-  signup(name: string, email: string, _password: string): User {
-    const user = { name, email };
-    localStorage.setItem(KEY, JSON.stringify(user));
-    return user;
+  async signup(name: string, email: string, password: string): Promise<AppUser> {
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: {
+        data: { display_name: name },
+        emailRedirectTo: `${window.location.origin}/dashboard`,
+      },
+    });
+    if (error) throw error;
+    if (!data.user) throw new Error("Signup failed");
+    return userFromSupabase(data.user)!;
   },
-  login(email: string, _password: string): User {
-    const existing = localStorage.getItem(KEY);
-    const user = existing ? JSON.parse(existing) : { name: email.split("@")[0], email };
-    user.email = email;
-    localStorage.setItem(KEY, JSON.stringify(user));
-    return user;
+  async login(email: string, password: string): Promise<AppUser> {
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw error;
+    return userFromSupabase(data.user)!;
   },
-  logout() {
-    localStorage.removeItem(KEY);
+  async logout(): Promise<void> {
+    await supabase.auth.signOut();
   },
-  current(): User | null {
-    const v = localStorage.getItem(KEY);
-    return v ? JSON.parse(v) : null;
+  async current(): Promise<AppUser | null> {
+    const { data } = await supabase.auth.getUser();
+    return userFromSupabase(data.user);
   },
 };
