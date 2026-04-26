@@ -267,6 +267,8 @@ const systemPrompts: Record<Step, string> = {
   learning_plan: "Build a focused 4-week plan to close the listed skill gaps. Each week targets ONE primary skill, has 3-5 actionable tasks, 3 high-quality resources (use real, well-known URLs like official docs, freeCodeCamp, MDN, frontendmasters.com, youtube.com), and an hours estimate (6-12).",
   job_readiness: "Compute an overall job readiness percentage (0-100) based on how well the candidate's scores meet the required thresholds, with penalties for missing skills. Return a one-sentence insight.",
   skill_confidence: "For each evaluated skill, compute a confidence score (0-100) measuring how well the assessed performance backs up what the resume claimed. Higher = candidate demonstrated what they claimed.",
+  validate_resume: "You are a strict resume validator. Decide if the input text is a real resume/CV. A resume should contain: a name/contact info, work experience or projects, skills, and/or education. Reject random text, articles, code, lyrics, marketing copy, or job descriptions. Return is_resume=false with confidence and a clear reason if it is not a resume. List the resume sections you actually detected.",
+  enhance_resume: "You are an expert technical recruiter and resume coach. Compare the candidate's resume to the target job description. Identify alignment gaps, missing ATS keywords, weak bullet points, and areas to strengthen. Provide 5-8 concrete, actionable suggested_changes — each tied to a specific resume section with a concrete example bullet/sentence the user can paste. Also produce a polished rewritten_summary tailored to the JD (2-4 sentences).",
 };
 
 async function runStep(step: Step, userPayload: unknown): Promise<unknown> {
