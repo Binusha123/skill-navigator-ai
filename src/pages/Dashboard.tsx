@@ -182,7 +182,18 @@ const Dashboard = () => {
 
     setLoading(true);
     setError(null);
+    setResumeInvalid(null);
     try {
+      setStage("Validating resume…");
+      const v = await validateResumeStrict(resumeText || resumeName);
+      if (!v.ok) {
+        setResumeInvalid(v.reason || "This document does not appear to be a resume.");
+        toast.error("Invalid resume document");
+        setLoading(false);
+        setStage("");
+        return;
+      }
+
       // Optional: upload resume file to private storage
       let resume_file_path: string | null = null;
       if (resumeFile) {
