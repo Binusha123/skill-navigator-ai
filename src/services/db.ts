@@ -131,9 +131,11 @@ export const assessmentsService = {
   },
   async create(input: Partial<Assessment> & { title: string }): Promise<Assessment> {
     const userId = await requireUserId();
+    // Cast to satisfy generated Json typing for jsonb columns.
+    const payload = { ...input, user_id: userId } as never;
     const { data, error } = await supabase
       .from("assessments")
-      .insert({ ...input, user_id: userId })
+      .insert(payload)
       .select()
       .single();
     if (error) throw error;
@@ -142,7 +144,7 @@ export const assessmentsService = {
   async update(id: string, patch: Partial<Assessment>): Promise<Assessment> {
     const { data, error } = await supabase
       .from("assessments")
-      .update(patch)
+      .update(patch as never)
       .eq("id", id)
       .select()
       .single();
