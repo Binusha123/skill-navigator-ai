@@ -136,11 +136,43 @@ const Dashboard = () => {
   const handleFile = async (f: File) => {
     setResumeName(f.name);
     setResumeFile(f);
+    setResumeInvalid(null);
     try {
       const text = await f.text();
       setResumeText(text.slice(0, 12000));
     } catch {
       toast.error("Could not read file. Try pasting your resume content into the field below.");
+    }
+  };
+
+  // Quick client-side heuristic — catches obvious non-resumes before calling the AI
+  const looksLikeResume = (text: string): { ok: boolean; reason?: string } => {
+    const t = text.toLowerCase();
+    if (t.trim().length < 200) return { ok: false, reason: "The document is too short to be a resume (min ~200 characters)." };
+    const sectionKeywords = ["experience", "education", "skills", "projects", "summary", "objective", "work history", "certifications", "employment"];
+    const hits = sectionKeywords.filter((k) => t.includes(k)).length;
+    const hasEmail = /[\w.+-]+@[\w-]+\.[\w.-]+/.test(t);
+    const hasPhone = /(\+?\d[\d\s().-]{7,})/.test(t);
+    if (hits < 2 && !hasEmail && !hasPhone) {
+      return { ok: false, reason: "We could not detect typical resume sections (experience, education, skills) or contact info." };
+    }
+    return { ok: true };
+  };
+
+  const validateResumeStrict = async (text: string) => {
+    // Layer 1: heuristic
+    const h = looksLikeResume(text);
+    if (!h.ok) return { ok: false, reason: h.reason! };
+    // Layer 2: AI validation
+    try {
+      const v = await aiAgent.validateResume(text);
+      if (!v.is_resume || v.confidence < 50) {
+        return { ok: false, reason: v.reason || "The AI could not recognize this as a resume." };
+      }
+      return { ok: true };
+    } catch {
+      // If AI validation fails, fall back to heuristic pass
+      return { ok: true };
     }
   };
 
