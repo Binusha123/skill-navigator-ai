@@ -16,7 +16,9 @@ type Step =
   | "gap_analysis"
   | "learning_plan"
   | "job_readiness"
-  | "skill_confidence";
+  | "skill_confidence"
+  | "validate_resume"
+  | "enhance_resume";
 
 interface ToolSpec {
   name: string;
