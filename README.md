@@ -162,12 +162,6 @@ Pull requests are welcome. For major changes, please open an issue first.
 
 ---
 
-## 📄 License
-
-This project is open-source a.
-
----
-
 ## 💡 Inspiration
 
 Resumes show what you *say* you know.
