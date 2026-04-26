@@ -250,6 +250,39 @@ const Dashboard = () => {
     }
   };
 
+  const runEnhance = async () => {
+    if (!resumeText && !resumeName) return toast.error("Please upload your resume first");
+    if (jd.trim().length < 30) return toast.error("Please paste the job description first");
+
+    setEnhancing(true);
+    setError(null);
+    setResumeInvalid(null);
+    setEnhancement(null);
+    try {
+      setStage("Validating resume…");
+      const v = await validateResumeStrict(resumeText || resumeName);
+      if (!v.ok) {
+        setResumeInvalid(v.reason || "This document does not appear to be a resume.");
+        toast.error("Invalid resume document");
+        return;
+      }
+      setStage("Analyzing resume vs job description…");
+      const result = await aiAgent.enhanceResume(resumeText || resumeName, jd);
+      setEnhancement(result);
+      toast.success("Resume enhancement ready!");
+      setTimeout(() => {
+        document.getElementById("resume-enhancement")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 100);
+    } catch (e) {
+      const msg = e instanceof Error ? e.message : "Something went wrong";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setEnhancing(false);
+      setStage("");
+    }
+  };
+
   const runEvaluation = async () => {
     if (!resumeData || !jdData || !assessment) return;
     const answered = Object.values(answers).filter((a) => a.trim().length > 10).length;
