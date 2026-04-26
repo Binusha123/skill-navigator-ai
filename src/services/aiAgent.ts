@@ -116,4 +116,8 @@ export const aiAgent = {
       claimed_skills: resume.skills,
       evaluations,
     }),
+  validateResume: (resume_text: string) =>
+    callAgent<ResumeValidation>("validate_resume", { resume_text }),
+  enhanceResume: (resume_text: string, jd_text: string) =>
+    callAgent<ResumeEnhancement>("enhance_resume", { resume_text, jd_text }),
 };
