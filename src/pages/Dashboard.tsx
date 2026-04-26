@@ -19,6 +19,7 @@ import {
   type JobReadiness,
   type LearningWeek,
   type ResumeData,
+  type ResumeEnhancement,
   type SkillEvaluation,
   type SkillMapping,
 } from "@/services/aiAgent";
