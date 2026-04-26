@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Loader2, Sparkles, Target, TrendingUp, Upload, XCircle } from "lucide-react";
+import { AlertTriangle, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Upload, Wand2, XCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
