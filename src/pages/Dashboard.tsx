@@ -349,6 +349,8 @@ const Dashboard = () => {
     setPlan([]);
     setReadiness(null);
     setConfidence([]);
+    setEnhancement(null);
+    setResumeInvalid(null);
     setSearchParams({});
   };
 
