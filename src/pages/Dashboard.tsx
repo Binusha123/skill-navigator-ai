@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
-import { useNavigate } from "react-router-dom";
-import { BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, Loader2, Sparkles, Target, TrendingUp, Upload, XCircle } from "lucide-react";
+import { useNavigate, useSearchParams } from "react-router-dom";
+import { BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Loader2, Sparkles, Target, TrendingUp, Upload, XCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { auth } from "@/lib/auth";
+import { useAuth } from "@/hooks/useAuth";
 import JobReadinessCard from "@/components/JobReadinessCard";
 import SkillConfidenceCard from "@/components/SkillConfidenceCard";
 import { toast } from "sonner";
@@ -21,18 +22,35 @@ import {
   type SkillEvaluation,
   type SkillMapping,
 } from "@/services/aiAgent";
+import {
+  assessmentsService,
+  learningPlanService,
+  questionsService,
+  resumesStorage,
+  type Assessment,
+  type QuestionRow,
+} from "@/services/db";
 
 type Step = "upload" | "assessment" | "results";
 
 const Dashboard = () => {
   const navigate = useNavigate();
-  const [user] = useState(auth.current());
+  const { displayName } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const loadId = searchParams.get("id");
+
   const [step, setStep] = useState<Step>("upload");
 
   // Inputs
+  const [title, setTitle] = useState("");
   const [resumeName, setResumeName] = useState("");
   const [resumeText, setResumeText] = useState("");
+  const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
+
+  // Persisted record
+  const [assessment, setAssessment] = useState<Assessment | null>(null);
+  const [dbQuestions, setDbQuestions] = useState<QuestionRow[]>([]);
 
   // Agent state
   const [resumeData, setResumeData] = useState<ResumeData | null>(null);
@@ -51,18 +69,74 @@ const Dashboard = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  // Load past assessment when ?id= is present
   useEffect(() => {
-    if (!user) navigate("/login");
-  }, [user, navigate]);
+    if (!loadId) return;
+    let cancelled = false;
+    (async () => {
+      setLoading(true);
+      try {
+        const [a, qs, weeks] = await Promise.all([
+          assessmentsService.getById(loadId),
+          questionsService.listForAssessment(loadId),
+          learningPlanService.listForAssessment(loadId),
+        ]);
+        if (cancelled || !a) return;
+        setAssessment(a);
+        setTitle(a.title);
+        setResumeText(a.resume_text ?? "");
+        setJd(a.jd_text ?? "");
+        setResumeData(a.resume_data);
+        setJdData(a.jd_data);
+        setGap(a.gap_analysis);
+        setConfidence(a.skill_confidence ?? []);
+        setReadiness(
+          a.job_readiness_score != null
+            ? { job_readiness: a.job_readiness_score, insight: a.insight ?? "" }
+            : null,
+        );
+        setDbQuestions(qs);
+        setQuestions(qs.map((q) => ({ id: q.id, skill: q.skill, question: q.question })));
+        setAnswers(Object.fromEntries(qs.map((q) => [q.id, q.answer ?? ""])));
+        setEvaluations(
+          qs
+            .filter((q) => q.score != null)
+            .map((q) => ({
+              skill: q.skill,
+              score: q.score ?? 0,
+              required: q.required_score ?? 0,
+              feedback: q.feedback ?? "",
+            })),
+        );
+        setPlan(
+          weeks.map((w) => ({
+            week: w.week,
+            focus: w.focus,
+            tasks: w.tasks,
+            resources: w.resources,
+            hours: w.hours,
+          })),
+        );
+        setStep(a.status === "completed" ? "results" : qs.length ? "assessment" : "upload");
+      } catch (e) {
+        toast.error(e instanceof Error ? e.message : "Could not load assessment");
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    })();
+    return () => {
+      cancelled = true;
+    };
+  }, [loadId]);
 
   const handleFile = async (f: File) => {
     setResumeName(f.name);
+    setResumeFile(f);
     try {
-      // Read as text — works for .txt and gives a best-effort for .pdf/.doc.
       const text = await f.text();
       setResumeText(text.slice(0, 12000));
     } catch {
-      toast.error("Could not read file. Try pasting your resume content into the JD field below.");
+      toast.error("Could not read file. Try pasting your resume content into the field below.");
     }
   };
 
@@ -73,6 +147,18 @@ const Dashboard = () => {
     setLoading(true);
     setError(null);
     try {
+      // Optional: upload resume file to private storage
+      let resume_file_path: string | null = null;
+      if (resumeFile) {
+        setStage("Uploading resume…");
+        try {
+          resume_file_path = await resumesStorage.upload(resumeFile);
+        } catch (e) {
+          // Non-fatal; continue with text-only
+          console.warn("Resume upload failed:", e);
+        }
+      }
+
       setStage("Parsing resume…");
       const r = await aiAgent.parseResume(resumeText || resumeName);
       setResumeData(r);
@@ -87,8 +173,24 @@ const Dashboard = () => {
 
       setStage("Generating tailored interview questions…");
       const q = await aiAgent.generateQuestions(j, r);
-      setQuestions(q.questions);
+
+      setStage("Saving assessment…");
+      const created = await assessmentsService.create({
+        title: title.trim() || `Assessment — ${new Date().toLocaleDateString()}`,
+        resume_text: resumeText || null,
+        jd_text: jd,
+        resume_file_path,
+        status: "in_progress",
+        resume_data: r,
+        jd_data: j,
+        skill_mapping: m,
+      });
+      setAssessment(created);
+      const inserted = await questionsService.insertMany(created.id, q.questions);
+      setDbQuestions(inserted);
+      setQuestions(inserted.map((row) => ({ id: row.id, skill: row.skill, question: row.question })));
       setAnswers({});
+      setSearchParams({ id: created.id });
       setStep("assessment");
       toast.success("Assessment ready — answer honestly!");
     } catch (e) {
@@ -102,7 +204,7 @@ const Dashboard = () => {
   };
 
   const runEvaluation = async () => {
-    if (!resumeData || !jdData) return;
+    if (!resumeData || !jdData || !assessment) return;
     const answered = Object.values(answers).filter((a) => a.trim().length > 10).length;
     if (answered < 3) return toast.error("Please answer at least 3 questions thoughtfully");
 
@@ -129,6 +231,17 @@ const Dashboard = () => {
       const conf = await aiAgent.skillConfidence(resumeData, ev.evaluations);
       setConfidence(conf.items);
 
+      setStage("Saving results…");
+      await questionsService.saveEvaluations(dbQuestions, answers, ev.evaluations);
+      await learningPlanService.replace(assessment.id, lp.weeks);
+      await assessmentsService.update(assessment.id, {
+        status: "completed",
+        job_readiness_score: jr.job_readiness,
+        insight: jr.insight,
+        gap_analysis: g,
+        skill_confidence: conf.items,
+      });
+
       setStep("results");
     } catch (e) {
       const msg = e instanceof Error ? e.message : "Something went wrong";
@@ -142,12 +255,21 @@ const Dashboard = () => {
 
   const reset = () => {
     setStep("upload");
+    setTitle("");
+    setResumeName("");
+    setResumeText("");
+    setResumeFile(null);
+    setJd("");
+    setAssessment(null);
+    setDbQuestions([]);
+    setQuestions([]);
     setAnswers({});
     setEvaluations([]);
     setGap(null);
     setPlan([]);
     setReadiness(null);
     setConfidence([]);
+    setSearchParams({});
   };
 
   const overall = evaluations.length ? Math.round(evaluations.reduce((s, r) => s + r.score, 0) / evaluations.length) : 0;
@@ -158,8 +280,6 @@ const Dashboard = () => {
   const weak = evaluations.filter((r) => r.score >= 40 && r.score < r.required);
   const strong = evaluations.filter((r) => r.score >= r.required);
 
-  if (!user) return null;
-
   return (
     <div className="min-h-screen bg-background">
       <Navbar />
@@ -168,7 +288,7 @@ const Dashboard = () => {
         <div className="mb-8 flex items-end justify-between gap-4">
           <div>
             <h1 className="font-display text-3xl font-bold md:text-4xl">
-              Hello, <span className="gradient-text">{user.name}</span> 👋
+              Hello, <span className="gradient-text">{displayName}</span> 👋
             </h1>
             <p className="mt-1 text-muted-foreground">
               {step === "upload" && "Let's start by analyzing your target role."}
@@ -176,11 +296,16 @@ const Dashboard = () => {
               {step === "results" && "Here's your full skill report and growth roadmap."}
             </p>
           </div>
-          {step !== "upload" && !loading && (
-            <Button variant="ghost" size="sm" onClick={reset}>
-              New assessment
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" size="sm" onClick={() => navigate("/history")}>
+              <History className="mr-1 h-4 w-4" /> History
             </Button>
-          )}
+            {step !== "upload" && !loading && (
+              <Button variant="ghost" size="sm" onClick={reset}>
+                New assessment
+              </Button>
+            )}
+          </div>
         </div>
 
         {/* Stepper */}
@@ -218,6 +343,17 @@ const Dashboard = () => {
 
         {step === "upload" && (
           <div className="grid gap-6 lg:grid-cols-2">
+            <div className="lg:col-span-2">
+              <Label htmlFor="title" className="text-sm text-muted-foreground">Assessment title (optional)</Label>
+              <Input
+                id="title"
+                placeholder="e.g. Frontend Engineer @ Stripe"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                className="mt-2"
+              />
+            </div>
+
             <div className="card-glass rounded-2xl p-6">
               <div className="mb-4 flex items-center gap-2">
                 <Upload className="h-5 w-5 text-primary" />
@@ -454,7 +590,7 @@ const Dashboard = () => {
 
 const GapCard = ({
   title, icon: Icon, color, items, empty,
-}: { title: string; icon: any; color: "success" | "warning" | "destructive"; items: string[]; empty: string }) => {
+}: { title: string; icon: React.ComponentType<{ className?: string }>; color: "success" | "warning" | "destructive"; items: string[]; empty: string }) => {
   const colorMap = {
     success: "text-success bg-success/10",
     warning: "text-warning bg-warning/10",
