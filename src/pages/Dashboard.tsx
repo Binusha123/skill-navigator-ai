@@ -68,7 +68,10 @@ const Dashboard = () => {
   // Loading
   const [stage, setStage] = useState<string>("");
   const [loading, setLoading] = useState(false);
+  const [enhancing, setEnhancing] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [resumeInvalid, setResumeInvalid] = useState<string | null>(null);
+  const [enhancement, setEnhancement] = useState<ResumeEnhancement | null>(null);
 
   // Load past assessment when ?id= is present
   useEffect(() => {
