@@ -205,6 +205,56 @@ const tools: Record<Step, ToolSpec> = {
       additionalProperties: false,
     },
   },
+  validate_resume: {
+    name: "return_validation",
+    description: "Determine if the input text is a real resume/CV",
+    parameters: {
+      type: "object",
+      properties: {
+        is_resume: { type: "boolean" },
+        confidence: { type: "number", description: "0-100 confidence that input is a resume" },
+        reason: { type: "string", description: "Short explanation of why or why not" },
+        detected_sections: {
+          type: "array",
+          items: { type: "string" },
+          description: "Resume sections found e.g. experience, education, skills, projects, contact",
+        },
+      },
+      required: ["is_resume", "confidence", "reason", "detected_sections"],
+      additionalProperties: false,
+    },
+  },
+  enhance_resume: {
+    name: "return_enhancement",
+    description: "Analyze resume against job description and return concrete improvements",
+    parameters: {
+      type: "object",
+      properties: {
+        overall_summary: { type: "string", description: "2-3 sentence high-level assessment" },
+        alignment_score: { type: "number", description: "0-100 how well resume aligns with JD" },
+        strengths: { type: "array", items: { type: "string" } },
+        weaknesses: { type: "array", items: { type: "string" } },
+        missing_keywords: { type: "array", items: { type: "string" }, description: "ATS keywords from JD missing in resume" },
+        suggested_changes: {
+          type: "array",
+          items: {
+            type: "object",
+            properties: {
+              section: { type: "string", description: "e.g. Summary, Experience, Skills, Projects, Education" },
+              issue: { type: "string", description: "What's wrong or missing" },
+              suggestion: { type: "string", description: "Concrete actionable rewrite or addition" },
+              example: { type: "string", description: "Example sentence/bullet they can paste" },
+            },
+            required: ["section", "issue", "suggestion", "example"],
+            additionalProperties: false,
+          },
+        },
+        rewritten_summary: { type: "string", description: "A polished professional summary tailored to the JD" },
+      },
+      required: ["overall_summary", "alignment_score", "strengths", "weaknesses", "missing_keywords", "suggested_changes", "rewritten_summary"],
+      additionalProperties: false,
+    },
+  },
 };
 
 const systemPrompts: Record<Step, string> = {
