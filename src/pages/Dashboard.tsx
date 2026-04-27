@@ -932,6 +932,60 @@ ${enhancement.suggested_changes
               <GapCard title="Missing Skills" icon={XCircle} color="destructive" items={gap?.missing_skills ?? missing.map(s => s.skill)} empty="Nothing missing 🎉" />
             </div>
 
+            {questions.length > 0 && (
+              <div className="card-glass rounded-2xl p-6">
+                <div className="mb-6 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-xl font-semibold">Answer Review</h2>
+                </div>
+                <div className="space-y-5">
+                  {questions.map((q, i) => {
+                    const userAns = (answers[q.id] || "").trim();
+                    const correct = (q.correct_answer || "").trim();
+                    const isMcq = q.qtype === "mcq";
+                    const isCorrect = isMcq && userAns && correct && userAns === correct;
+                    return (
+                      <div key={q.id} className="rounded-2xl border border-border/60 bg-muted/20 p-5">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/15 text-xs font-semibold text-primary">{i + 1}</span>
+                          <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary">{q.skill}</span>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">{q.qtype}</span>
+                          {isMcq && userAns && (
+                            <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${isCorrect ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+                              {isCorrect ? "Correct" : "Incorrect"}
+                            </span>
+                          )}
+                          {q.source_url && (
+                            <a href={q.source_url} target="_blank" rel="noreferrer" className="ml-auto flex items-center gap-1 text-xs text-secondary hover:underline">
+                              <ExternalLink className="h-3 w-3" /> Problem link
+                            </a>
+                          )}
+                        </div>
+                        <p className="mb-3 whitespace-pre-wrap text-sm font-medium">{q.question}</p>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your answer</div>
+                            <p className={`whitespace-pre-wrap text-sm ${q.qtype === "coding" ? "font-mono" : ""}`}>
+                              {userAns || <span className="italic text-muted-foreground">No answer provided</span>}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-success/30 bg-success/5 p-3">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-success">
+                              {isMcq ? "Correct answer" : "Model answer"}
+                            </div>
+                            <p className={`whitespace-pre-wrap text-sm ${q.qtype === "coding" ? "font-mono" : ""}`}>
+                              {correct || <span className="italic text-muted-foreground">Not available</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
             <div className="card-glass rounded-2xl p-6">
               <div className="mb-6 flex items-center gap-2">
                 <BookOpen className="h-5 w-5 text-primary" />
