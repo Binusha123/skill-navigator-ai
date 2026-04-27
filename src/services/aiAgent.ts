@@ -115,10 +115,18 @@ export const aiAgent = {
     }),
   gapAnalysis: (evaluations: SkillEvaluation[], jd: JDData) =>
     callAgent<GapAnalysis>("gap_analysis", { evaluations, required_skills: jd.required_skills }),
-  learningPlan: (gap: GapAnalysis, resume: ResumeData) =>
+  learningPlan: (
+    gap: GapAnalysis,
+    resume: ResumeData,
+    extras?: { evaluations?: SkillEvaluation[]; job_readiness?: number },
+  ) =>
     callAgent<{ weeks: LearningWeek[] }>("learning_plan", {
-      missing_skills: [...gap.missing_skills, ...gap.weak_skills],
+      missing_skills: gap.missing_skills,
+      weak_skills: gap.weak_skills,
+      strengths: gap.strengths,
       experience_level: resume.experience_level,
+      evaluations: extras?.evaluations ?? [],
+      job_readiness: extras?.job_readiness ?? null,
     }),
   jobReadiness: (evaluations: SkillEvaluation[], gap: GapAnalysis) =>
     callAgent<JobReadiness>("job_readiness", { evaluations, gap }),

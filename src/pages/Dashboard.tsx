@@ -388,13 +388,16 @@ ${enhancement.suggested_changes
       const g = await aiAgent.gapAnalysis(ev.evaluations, jdData);
       setGap(g);
 
-      setStage("Building your learning plan…");
-      const lp = await aiAgent.learningPlan(g, resumeData);
-      setPlan(lp.weeks);
-
       setStage("Calculating job readiness…");
       const jr = await aiAgent.jobReadiness(ev.evaluations, g);
       setReadiness(jr);
+
+      setStage("Building your personalized learning plan…");
+      const lp = await aiAgent.learningPlan(g, resumeData, {
+        evaluations: ev.evaluations,
+        job_readiness: jr.job_readiness,
+      });
+      setPlan(lp.weeks);
 
       setStage("Computing skill confidence…");
       const conf = await aiAgent.skillConfidence(resumeData, ev.evaluations);
