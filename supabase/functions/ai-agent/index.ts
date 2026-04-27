@@ -148,7 +148,7 @@ const tools: Record<Step, ToolSpec> = {
   },
   learning_plan: {
     name: "return_plan",
-    description: "Return a 4-week learning plan",
+    description: "Return a personalized multi-week learning plan (length adapts to performance)",
     parameters: {
       type: "object",
       properties: {
