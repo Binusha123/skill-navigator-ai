@@ -18,40 +18,52 @@ export type Database = {
         Row: {
           answer: string | null
           assessment_id: string
+          correct_answer: string | null
           created_at: string
           feedback: string | null
           id: string
+          options: Json | null
           position: number
+          qtype: string
           question: string
           required_score: number | null
           score: number | null
           skill: string
+          source_url: string | null
           user_id: string
         }
         Insert: {
           answer?: string | null
           assessment_id: string
+          correct_answer?: string | null
           created_at?: string
           feedback?: string | null
           id?: string
+          options?: Json | null
           position?: number
+          qtype?: string
           question: string
           required_score?: number | null
           score?: number | null
           skill: string
+          source_url?: string | null
           user_id: string
         }
         Update: {
           answer?: string | null
           assessment_id?: string
+          correct_answer?: string | null
           created_at?: string
           feedback?: string | null
           id?: string
+          options?: Json | null
           position?: number
+          qtype?: string
           question?: string
           required_score?: number | null
           score?: number | null
           skill?: string
+          source_url?: string | null
           user_id?: string
         }
         Relationships: [
