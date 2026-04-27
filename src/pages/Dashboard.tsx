@@ -855,6 +855,16 @@ ${enhancement.suggested_changes
 
         {step === "results" && (
           <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="-ml-2">
+                <ArrowLeft className="h-4 w-4" /> Back to upload
+              </Button>
+              {questions.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setStep("assessment")}>
+                  Review answers
+                </Button>
+              )}
+            </div>
             {readiness && (
               <JobReadinessCard
                 score={readiness.job_readiness}
