@@ -23,8 +23,14 @@ const Signup = () => {
     setLoading(true);
     try {
       await auth.signup(name, email, password);
-      toast.success("Account created — check your email to confirm, then log in.");
-      navigate("/login");
+      toast.success("Account created! Logging you in…");
+      // Auto-confirm is enabled, so we can sign in immediately.
+      try {
+        await auth.login(email, password);
+        navigate("/dashboard");
+      } catch {
+        navigate("/login");
+      }
     } catch (err) {
       const msg = err instanceof Error ? err.message : "Signup failed";
       toast.error(msg);
