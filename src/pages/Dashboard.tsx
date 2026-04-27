@@ -597,16 +597,21 @@ ${enhancement.suggested_changes
             {enhancement && (
               <div id="resume-enhancement" className="lg:col-span-2 space-y-5">
                 <div className="card-glass rounded-2xl p-6">
-                  <div className="mb-4 flex items-center justify-between gap-4">
+                  <div className="mb-4 flex flex-wrap items-center justify-between gap-4">
                     <div className="flex items-center gap-2">
                       <Wand2 className="h-5 w-5 text-primary" />
                       <h2 className="font-display text-xl font-semibold">Resume Enhancement Report</h2>
                     </div>
-                    <div className="text-right">
-                      <div className="text-xs uppercase tracking-wide text-muted-foreground">JD Alignment</div>
-                      <div className={`font-display text-3xl font-bold ${enhancement.alignment_score >= 70 ? "text-success" : enhancement.alignment_score >= 40 ? "text-warning" : "text-destructive"}`}>
-                        {enhancement.alignment_score}<span className="text-base text-muted-foreground">/100</span>
+                    <div className="flex items-center gap-4">
+                      <div className="text-right">
+                        <div className="text-xs uppercase tracking-wide text-muted-foreground">JD Alignment</div>
+                        <div className={`font-display text-3xl font-bold ${enhancement.alignment_score >= 70 ? "text-success" : enhancement.alignment_score >= 40 ? "text-warning" : "text-destructive"}`}>
+                          {enhancement.alignment_score}<span className="text-base text-muted-foreground">/100</span>
+                        </div>
                       </div>
+                      <Button variant="hero" size="sm" onClick={downloadEnhancedResume}>
+                        <FileText className="h-4 w-4" /> Download Improved Resume
+                      </Button>
                     </div>
                   </div>
                   <p className="text-sm text-muted-foreground">{enhancement.overall_summary}</p>
