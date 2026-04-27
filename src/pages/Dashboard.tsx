@@ -606,6 +606,56 @@ ${enhancement.suggested_changes
               </div>
             )}
 
+            <div className="lg:col-span-2 card-glass rounded-2xl p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <BrainCircuit className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-xl font-semibold">Assessment Configuration</h2>
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <Label className="text-sm text-muted-foreground">Number of questions</Label>
+                  <Select value={String(questionCount)} onValueChange={(v) => setQuestionCount(Number(v))}>
+                    <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 questions (quick)</SelectItem>
+                      <SelectItem value="10">10 questions</SelectItem>
+                      <SelectItem value="15">15 questions</SelectItem>
+                      <SelectItem value="20">20 questions (deep)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Question format</Label>
+                  <RadioGroup
+                    value={questionType}
+                    onValueChange={(v) => setQuestionType(v as QuestionType | "mixed")}
+                    className="mt-2 grid grid-cols-2 gap-2"
+                  >
+                    {[
+                      { v: "short", l: "Short answer" },
+                      { v: "mcq", l: "Multiple choice" },
+                      { v: "coding", l: "Coding / DSA" },
+                      { v: "mixed", l: "Mixed" },
+                    ].map((o) => (
+                      <Label
+                        key={o.v}
+                        htmlFor={`qtype-${o.v}`}
+                        className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors ${questionType === o.v ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                      >
+                        <RadioGroupItem id={`qtype-${o.v}`} value={o.v} />
+                        {o.l}
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                  {questionType === "coding" && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Coding questions will include direct LeetCode/HackerRank links when DSA is detected in the JD.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="lg:col-span-2 grid gap-3 sm:grid-cols-2">
               <Button variant="hero" size="xl" className="w-full" onClick={runIntake} disabled={loading || enhancing}>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
