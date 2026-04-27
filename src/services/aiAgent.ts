@@ -15,10 +15,15 @@ export interface SkillMapping {
   missing_skills: string[];
   weak_skills: string[];
 }
+export type QuestionType = "mcq" | "short" | "coding";
 export interface AgentQuestion {
   id: string;
   skill: string;
   question: string;
+  qtype: QuestionType;
+  options: string[];
+  correct_answer: string;
+  source_url: string;
 }
 export interface SkillEvaluation {
   skill: string;
@@ -88,10 +93,16 @@ export const aiAgent = {
     callAgent<JDData>("analyze_jd", { jd_text }),
   skillMapping: (resume: ResumeData, jd: JDData) =>
     callAgent<SkillMapping>("skill_mapping", { candidate_skills: resume.skills, required_skills: jd.required_skills }),
-  generateQuestions: (jd: JDData, resume: ResumeData) =>
+  generateQuestions: (
+    jd: JDData,
+    resume: ResumeData,
+    opts: { count: number; question_type: QuestionType | "mixed" },
+  ) =>
     callAgent<{ questions: AgentQuestion[] }>("generate_questions", {
       required_skills: jd.required_skills,
       experience_level: resume.experience_level,
+      count: opts.count,
+      question_type: opts.question_type,
     }),
   evaluateAnswers: (
     questions: AgentQuestion[],

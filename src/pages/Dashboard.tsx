@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlertTriangle, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Upload, Wand2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, ExternalLink, FileText, History, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Upload, Wand2, XCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import JobReadinessCard from "@/components/JobReadinessCard";
 import SkillConfidenceCard from "@/components/SkillConfidenceCard";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   aiAgent,
@@ -18,6 +20,7 @@ import {
   type JDData,
   type JobReadiness,
   type LearningWeek,
+  type QuestionType,
   type ResumeData,
   type ResumeEnhancement,
   type SkillEvaluation,
@@ -48,6 +51,10 @@ const Dashboard = () => {
   const [resumeText, setResumeText] = useState("");
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
+
+  // Question config
+  const [questionCount, setQuestionCount] = useState<number>(5);
+  const [questionType, setQuestionType] = useState<QuestionType | "mixed">("short");
 
   // Persisted record
   const [assessment, setAssessment] = useState<Assessment | null>(null);
@@ -100,7 +107,15 @@ const Dashboard = () => {
             : null,
         );
         setDbQuestions(qs);
-        setQuestions(qs.map((q) => ({ id: q.id, skill: q.skill, question: q.question })));
+        setQuestions(qs.map((q) => ({
+          id: q.id,
+          skill: q.skill,
+          question: q.question,
+          qtype: (q.qtype as QuestionType) || "short",
+          options: (q.options ?? []) as string[],
+          correct_answer: q.correct_answer ?? "",
+          source_url: q.source_url ?? "",
+        })));
         setAnswers(Object.fromEntries(qs.map((q) => [q.id, q.answer ?? ""])));
         setEvaluations(
           qs
@@ -285,7 +300,7 @@ ${enhancement.suggested_changes
       setMapping(m);
 
       setStage("Generating tailored interview questions…");
-      const q = await aiAgent.generateQuestions(j, r);
+      const q = await aiAgent.generateQuestions(j, r, { count: questionCount, question_type: questionType });
 
       setStage("Saving assessment…");
       const created = await assessmentsService.create({
@@ -301,7 +316,15 @@ ${enhancement.suggested_changes
       setAssessment(created);
       const inserted = await questionsService.insertMany(created.id, q.questions);
       setDbQuestions(inserted);
-      setQuestions(inserted.map((row) => ({ id: row.id, skill: row.skill, question: row.question })));
+      setQuestions(inserted.map((row) => ({
+        id: row.id,
+        skill: row.skill,
+        question: row.question,
+        qtype: (row.qtype as QuestionType) || "short",
+        options: (row.options ?? []) as string[],
+        correct_answer: row.correct_answer ?? "",
+        source_url: row.source_url ?? "",
+      })));
       setAnswers({});
       setSearchParams({ id: created.id });
       setStep("assessment");
@@ -583,6 +606,56 @@ ${enhancement.suggested_changes
               </div>
             )}
 
+            <div className="lg:col-span-2 card-glass rounded-2xl p-6">
+              <div className="mb-4 flex items-center gap-2">
+                <BrainCircuit className="h-5 w-5 text-primary" />
+                <h2 className="font-display text-xl font-semibold">Assessment Configuration</h2>
+              </div>
+              <div className="grid gap-5 md:grid-cols-2">
+                <div>
+                  <Label className="text-sm text-muted-foreground">Number of questions</Label>
+                  <Select value={String(questionCount)} onValueChange={(v) => setQuestionCount(Number(v))}>
+                    <SelectTrigger className="mt-2"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="5">5 questions (quick)</SelectItem>
+                      <SelectItem value="10">10 questions</SelectItem>
+                      <SelectItem value="15">15 questions</SelectItem>
+                      <SelectItem value="20">20 questions (deep)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label className="text-sm text-muted-foreground">Question format</Label>
+                  <RadioGroup
+                    value={questionType}
+                    onValueChange={(v) => setQuestionType(v as QuestionType | "mixed")}
+                    className="mt-2 grid grid-cols-2 gap-2"
+                  >
+                    {[
+                      { v: "short", l: "Short answer" },
+                      { v: "mcq", l: "Multiple choice" },
+                      { v: "coding", l: "Coding / DSA" },
+                      { v: "mixed", l: "Mixed" },
+                    ].map((o) => (
+                      <Label
+                        key={o.v}
+                        htmlFor={`qtype-${o.v}`}
+                        className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm transition-colors ${questionType === o.v ? "border-primary bg-primary/10 text-primary" : "border-border hover:border-primary/40"}`}
+                      >
+                        <RadioGroupItem id={`qtype-${o.v}`} value={o.v} />
+                        {o.l}
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                  {questionType === "coding" && (
+                    <p className="mt-2 text-xs text-muted-foreground">
+                      Coding questions will include direct LeetCode/HackerRank links when DSA is detected in the JD.
+                    </p>
+                  )}
+                </div>
+              </div>
+            </div>
+
             <div className="lg:col-span-2 grid gap-3 sm:grid-cols-2">
               <Button variant="hero" size="xl" className="w-full" onClick={runIntake} disabled={loading || enhancing}>
                 {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Sparkles className="h-5 w-5" />}
@@ -697,6 +770,9 @@ ${enhancement.suggested_changes
 
         {step === "assessment" && (
           <div className="space-y-5">
+            <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="-ml-2">
+              <ArrowLeft className="h-4 w-4" /> Back to upload
+            </Button>
             {resumeData && jdData && (
               <div className="card-glass rounded-2xl p-5">
                 <div className="grid gap-4 md:grid-cols-2 text-sm">
@@ -727,16 +803,47 @@ ${enhancement.suggested_changes
                       {i + 1}
                     </div>
                     <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary">{q.skill}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">{q.qtype}</span>
                   </div>
+                  {q.source_url && (
+                    <a
+                      href={q.source_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-xs text-secondary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Open problem
+                    </a>
+                  )}
                 </div>
-                <p className="mb-3 text-base font-medium">{q.question}</p>
-                <Textarea
-                  rows={3}
-                  placeholder="Type your answer here…"
-                  value={answers[q.id] || ""}
-                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                  className="resize-none"
-                />
+                <p className="mb-3 whitespace-pre-wrap text-base font-medium">{q.question}</p>
+
+                {q.qtype === "mcq" && q.options.length > 0 ? (
+                  <RadioGroup
+                    value={answers[q.id] || ""}
+                    onValueChange={(v) => setAnswers({ ...answers, [q.id]: v })}
+                    className="space-y-2"
+                  >
+                    {q.options.map((opt, idx) => (
+                      <Label
+                        key={idx}
+                        htmlFor={`${q.id}-${idx}`}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${answers[q.id] === opt ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+                      >
+                        <RadioGroupItem id={`${q.id}-${idx}`} value={opt} className="mt-0.5" />
+                        <span className="flex-1">{opt}</span>
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <Textarea
+                    rows={q.qtype === "coding" ? 8 : 3}
+                    placeholder={q.qtype === "coding" ? "Paste your code or describe your approach…" : "Type your answer here…"}
+                    value={answers[q.id] || ""}
+                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                    className={`resize-none ${q.qtype === "coding" ? "font-mono text-sm" : ""}`}
+                  />
+                )}
               </div>
             ))}
             <Button variant="hero" size="xl" className="w-full" onClick={runEvaluation} disabled={loading}>
@@ -748,6 +855,16 @@ ${enhancement.suggested_changes
 
         {step === "results" && (
           <div className="space-y-6">
+            <div className="flex items-center justify-between">
+              <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="-ml-2">
+                <ArrowLeft className="h-4 w-4" /> Back to upload
+              </Button>
+              {questions.length > 0 && (
+                <Button variant="outline" size="sm" onClick={() => setStep("assessment")}>
+                  Review answers
+                </Button>
+              )}
+            </div>
             {readiness && (
               <JobReadinessCard
                 score={readiness.job_readiness}
@@ -814,6 +931,60 @@ ${enhancement.suggested_changes
               <GapCard title="Weak Skills" icon={Clock} color="warning" items={gap?.weak_skills ?? weak.map(s => s.skill)} empty="None — well done!" />
               <GapCard title="Missing Skills" icon={XCircle} color="destructive" items={gap?.missing_skills ?? missing.map(s => s.skill)} empty="Nothing missing 🎉" />
             </div>
+
+            {questions.length > 0 && (
+              <div className="card-glass rounded-2xl p-6">
+                <div className="mb-6 flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-primary" />
+                  <h2 className="font-display text-xl font-semibold">Answer Review</h2>
+                </div>
+                <div className="space-y-5">
+                  {questions.map((q, i) => {
+                    const userAns = (answers[q.id] || "").trim();
+                    const correct = (q.correct_answer || "").trim();
+                    const isMcq = q.qtype === "mcq";
+                    const isCorrect = isMcq && userAns && correct && userAns === correct;
+                    return (
+                      <div key={q.id} className="rounded-2xl border border-border/60 bg-muted/20 p-5">
+                        <div className="mb-2 flex flex-wrap items-center gap-2">
+                          <span className="flex h-6 w-6 items-center justify-center rounded-md bg-primary/15 text-xs font-semibold text-primary">{i + 1}</span>
+                          <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary">{q.skill}</span>
+                          <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">{q.qtype}</span>
+                          {isMcq && userAns && (
+                            <span className={`ml-auto rounded-full px-2 py-0.5 text-xs font-semibold ${isCorrect ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+                              {isCorrect ? "Correct" : "Incorrect"}
+                            </span>
+                          )}
+                          {q.source_url && (
+                            <a href={q.source_url} target="_blank" rel="noreferrer" className="ml-auto flex items-center gap-1 text-xs text-secondary hover:underline">
+                              <ExternalLink className="h-3 w-3" /> Problem link
+                            </a>
+                          )}
+                        </div>
+                        <p className="mb-3 whitespace-pre-wrap text-sm font-medium">{q.question}</p>
+
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">Your answer</div>
+                            <p className={`whitespace-pre-wrap text-sm ${q.qtype === "coding" ? "font-mono" : ""}`}>
+                              {userAns || <span className="italic text-muted-foreground">No answer provided</span>}
+                            </p>
+                          </div>
+                          <div className="rounded-xl border border-success/30 bg-success/5 p-3">
+                            <div className="mb-1 text-xs font-semibold uppercase tracking-wide text-success">
+                              {isMcq ? "Correct answer" : "Model answer"}
+                            </div>
+                            <p className={`whitespace-pre-wrap text-sm ${q.qtype === "coding" ? "font-mono" : ""}`}>
+                              {correct || <span className="italic text-muted-foreground">Not available</span>}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
 
             <div className="card-glass rounded-2xl p-6">
               <div className="mb-6 flex items-center gap-2">

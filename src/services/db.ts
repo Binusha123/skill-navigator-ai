@@ -43,6 +43,10 @@ export interface QuestionRow {
   required_score: number | null;
   feedback: string | null;
   position: number;
+  qtype: string;
+  options: string[] | null;
+  correct_answer: string | null;
+  source_url: string | null;
 }
 
 export interface LearningWeekRow {
@@ -179,13 +183,17 @@ export const questionsService = {
       skill: q.skill,
       question: q.question,
       position: i,
+      qtype: q.qtype ?? "short",
+      options: (q.options ?? []) as never,
+      correct_answer: q.correct_answer ?? null,
+      source_url: q.source_url ?? null,
     }));
     const { data, error } = await supabase
       .from("assessment_questions")
-      .insert(rows)
+      .insert(rows as never)
       .select();
     if (error) throw error;
-    return (data ?? []) as QuestionRow[];
+    return (data ?? []) as unknown as QuestionRow[];
   },
   async saveEvaluations(
     rows: QuestionRow[],

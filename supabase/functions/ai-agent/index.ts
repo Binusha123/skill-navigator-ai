@@ -71,7 +71,7 @@ const tools: Record<Step, ToolSpec> = {
   },
   generate_questions: {
     name: "return_questions",
-    description: "Return 5 interview questions",
+    description: "Return interview questions",
     parameters: {
       type: "object",
       properties: {
@@ -83,8 +83,22 @@ const tools: Record<Step, ToolSpec> = {
               id: { type: "string" },
               skill: { type: "string" },
               question: { type: "string" },
+              qtype: { type: "string", description: "mcq | short | coding" },
+              options: {
+                type: "array",
+                items: { type: "string" },
+                description: "For MCQ: 4 answer choices. Empty for short/coding.",
+              },
+              correct_answer: {
+                type: "string",
+                description: "For MCQ: the exact correct option text. For short/coding: a model/ideal answer.",
+              },
+              source_url: {
+                type: "string",
+                description: "For coding DSA questions, a real LeetCode/HackerRank/Codeforces URL. Empty otherwise.",
+              },
             },
-            required: ["id", "skill", "question"],
+            required: ["id", "skill", "question", "qtype", "options", "correct_answer", "source_url"],
             additionalProperties: false,
           },
         },
@@ -261,7 +275,7 @@ const systemPrompts: Record<Step, string> = {
   parse_resume: "You are a resume parser. Extract structured data from the resume text. Infer skills even when implicit. experience_level must be one of: junior, mid, senior.",
   analyze_jd: "You are a job description analyst. Extract required and optional skills and the seniority level from the job description.",
   skill_mapping: "Compare candidate skills against required skills. matched = present and strong; weak = present but underdeveloped; missing = required but absent.",
-  generate_questions: "You are a senior technical interviewer. Generate exactly 5 open-ended interview questions tailored to the required skills and the candidate's experience level. Use ids q1..q5. Cover the most important required skills.",
+  generate_questions: "You are a senior technical interviewer. Generate the EXACT number of interview questions requested in the payload (count). Respect the requested question_type: 'mcq' (multiple-choice with EXACTLY 4 options and one correct_answer matching one option verbatim), 'short' (open-ended written answer with a model correct_answer in 2-4 sentences), 'coding' (algorithm/DSA problem with a brief problem statement, a high-level model solution in correct_answer, and a real source_url to a well-known LeetCode/HackerRank/Codeforces problem that matches). If the role mentions DSA, algorithms, problem solving, or competitive programming, you MUST include coding questions with valid source_url. Use ids q1, q2, q3… Cover the most important required skills. For non-applicable fields use empty array [] for options or empty string \"\" for source_url.",
   evaluate_answers: "You are an expert evaluator. For each required skill, judge the candidate's answer (or absence thereof) and produce a score 0-100 reflecting demonstrated proficiency, plus the role's required threshold (0-100) and short feedback. If no answer was given for a skill, score it low (10-30).",
   gap_analysis: "Categorize skills based on their score vs required threshold. strengths: score >= required. weak_skills: 40 <= score < required. missing_skills: score < 40 OR required but not assessed.",
   learning_plan: "Build a focused 4-week plan to close the listed skill gaps. Each week targets ONE primary skill, has 3-5 actionable tasks, 3 high-quality resources (use real, well-known URLs like official docs, freeCodeCamp, MDN, frontendmasters.com, youtube.com), and an hours estimate (6-12).",
