@@ -52,6 +52,10 @@ const Dashboard = () => {
   const [resumeFile, setResumeFile] = useState<File | null>(null);
   const [jd, setJd] = useState("");
 
+  // Question config
+  const [questionCount, setQuestionCount] = useState<number>(5);
+  const [questionType, setQuestionType] = useState<QuestionType | "mixed">("short");
+
   // Persisted record
   const [assessment, setAssessment] = useState<Assessment | null>(null);
   const [dbQuestions, setDbQuestions] = useState<QuestionRow[]>([]);
@@ -103,7 +107,15 @@ const Dashboard = () => {
             : null,
         );
         setDbQuestions(qs);
-        setQuestions(qs.map((q) => ({ id: q.id, skill: q.skill, question: q.question })));
+        setQuestions(qs.map((q) => ({
+          id: q.id,
+          skill: q.skill,
+          question: q.question,
+          qtype: (q.qtype as QuestionType) || "short",
+          options: (q.options ?? []) as string[],
+          correct_answer: q.correct_answer ?? "",
+          source_url: q.source_url ?? "",
+        })));
         setAnswers(Object.fromEntries(qs.map((q) => [q.id, q.answer ?? ""])));
         setEvaluations(
           qs
@@ -288,7 +300,7 @@ ${enhancement.suggested_changes
       setMapping(m);
 
       setStage("Generating tailored interview questions…");
-      const q = await aiAgent.generateQuestions(j, r);
+      const q = await aiAgent.generateQuestions(j, r, { count: questionCount, question_type: questionType });
 
       setStage("Saving assessment…");
       const created = await assessmentsService.create({
@@ -304,7 +316,15 @@ ${enhancement.suggested_changes
       setAssessment(created);
       const inserted = await questionsService.insertMany(created.id, q.questions);
       setDbQuestions(inserted);
-      setQuestions(inserted.map((row) => ({ id: row.id, skill: row.skill, question: row.question })));
+      setQuestions(inserted.map((row) => ({
+        id: row.id,
+        skill: row.skill,
+        question: row.question,
+        qtype: (row.qtype as QuestionType) || "short",
+        options: (row.options ?? []) as string[],
+        correct_answer: row.correct_answer ?? "",
+        source_url: row.source_url ?? "",
+      })));
       setAnswers({});
       setSearchParams({ id: created.id });
       setStep("assessment");
