@@ -770,6 +770,9 @@ ${enhancement.suggested_changes
 
         {step === "assessment" && (
           <div className="space-y-5">
+            <Button variant="ghost" size="sm" onClick={() => setStep("upload")} className="-ml-2">
+              <ArrowLeft className="h-4 w-4" /> Back to upload
+            </Button>
             {resumeData && jdData && (
               <div className="card-glass rounded-2xl p-5">
                 <div className="grid gap-4 md:grid-cols-2 text-sm">
@@ -800,16 +803,47 @@ ${enhancement.suggested_changes
                       {i + 1}
                     </div>
                     <span className="rounded-full bg-secondary/15 px-2 py-0.5 text-xs font-medium text-secondary">{q.skill}</span>
+                    <span className="rounded-full bg-muted px-2 py-0.5 text-xs uppercase tracking-wide text-muted-foreground">{q.qtype}</span>
                   </div>
+                  {q.source_url && (
+                    <a
+                      href={q.source_url}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-xs text-secondary hover:underline"
+                    >
+                      <ExternalLink className="h-3 w-3" /> Open problem
+                    </a>
+                  )}
                 </div>
-                <p className="mb-3 text-base font-medium">{q.question}</p>
-                <Textarea
-                  rows={3}
-                  placeholder="Type your answer here…"
-                  value={answers[q.id] || ""}
-                  onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
-                  className="resize-none"
-                />
+                <p className="mb-3 whitespace-pre-wrap text-base font-medium">{q.question}</p>
+
+                {q.qtype === "mcq" && q.options.length > 0 ? (
+                  <RadioGroup
+                    value={answers[q.id] || ""}
+                    onValueChange={(v) => setAnswers({ ...answers, [q.id]: v })}
+                    className="space-y-2"
+                  >
+                    {q.options.map((opt, idx) => (
+                      <Label
+                        key={idx}
+                        htmlFor={`${q.id}-${idx}`}
+                        className={`flex cursor-pointer items-start gap-3 rounded-xl border px-4 py-3 text-sm transition-colors ${answers[q.id] === opt ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"}`}
+                      >
+                        <RadioGroupItem id={`${q.id}-${idx}`} value={opt} className="mt-0.5" />
+                        <span className="flex-1">{opt}</span>
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                ) : (
+                  <Textarea
+                    rows={q.qtype === "coding" ? 8 : 3}
+                    placeholder={q.qtype === "coding" ? "Paste your code or describe your approach…" : "Type your answer here…"}
+                    value={answers[q.id] || ""}
+                    onChange={(e) => setAnswers({ ...answers, [q.id]: e.target.value })}
+                    className={`resize-none ${q.qtype === "coding" ? "font-mono text-sm" : ""}`}
+                  />
+                )}
               </div>
             ))}
             <Button variant="hero" size="xl" className="w-full" onClick={runEvaluation} disabled={loading}>
