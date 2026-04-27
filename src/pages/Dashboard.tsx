@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { AlertTriangle, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, FileText, History, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Upload, Wand2, XCircle } from "lucide-react";
+import { AlertTriangle, ArrowLeft, BookOpen, BrainCircuit, CheckCircle2, ChevronRight, Clock, ExternalLink, FileText, History, Lightbulb, Loader2, Sparkles, Target, TrendingUp, Upload, Wand2, XCircle } from "lucide-react";
 import Navbar from "@/components/Navbar";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -9,6 +9,8 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/hooks/useAuth";
 import JobReadinessCard from "@/components/JobReadinessCard";
 import SkillConfidenceCard from "@/components/SkillConfidenceCard";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 import {
   aiAgent,
@@ -18,6 +20,7 @@ import {
   type JDData,
   type JobReadiness,
   type LearningWeek,
+  type QuestionType,
   type ResumeData,
   type ResumeEnhancement,
   type SkillEvaluation,
