@@ -5,7 +5,7 @@ const corsHeaders = {
 };
 
 const LOVABLE_API_KEY = Deno.env.get("LOVABLE_API_KEY");
-const MODEL = "openai/gpt-5";
+const MODEL = "google/gemini-2.5-flash";
 
 type Step =
   | "parse_resume"
