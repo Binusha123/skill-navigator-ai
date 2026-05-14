@@ -924,7 +924,7 @@ ${enhancement.suggested_changes
               <div className="card-glass rounded-2xl p-6">
                 <h2 className="mb-6 font-display text-xl font-semibold">Skill Breakdown</h2>
                 <div className="space-y-5">
-                  {evaluations.map((r) => (
+                  {dedupedEvaluations.map((r) => (
                     <div key={r.skill}>
                       <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="font-medium">{r.skill}</span>
