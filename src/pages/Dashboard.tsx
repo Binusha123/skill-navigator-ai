@@ -446,13 +446,36 @@ ${enhancement.suggested_changes
     setSearchParams({});
   };
 
-  const overall = evaluations.length ? Math.round(evaluations.reduce((s, r) => s + r.score, 0) / evaluations.length) : 0;
-  const requiredAvg = evaluations.length ? Math.round(evaluations.reduce((s, r) => s + r.required, 0) / evaluations.length) : 0;
+  // Consolidate duplicate skill entries (AI may return one per question) by averaging.
+  const dedupedEvaluations = (() => {
+    const map = new Map<string, { skill: string; score: number; required: number; feedback: string; count: number }>();
+    for (const r of evaluations) {
+      const key = r.skill.trim().toLowerCase();
+      const existing = map.get(key);
+      if (existing) {
+        existing.score += r.score;
+        existing.required = Math.max(existing.required, r.required);
+        existing.count += 1;
+        if (r.feedback && r.feedback.length > existing.feedback.length) existing.feedback = r.feedback;
+      } else {
+        map.set(key, { skill: r.skill, score: r.score, required: r.required, feedback: r.feedback, count: 1 });
+      }
+    }
+    return Array.from(map.values()).map((e) => ({
+      skill: e.skill,
+      score: Math.round(e.score / e.count),
+      required: e.required,
+      feedback: e.feedback,
+    }));
+  })();
+
+  const overall = dedupedEvaluations.length ? Math.round(dedupedEvaluations.reduce((s, r) => s + r.score, 0) / dedupedEvaluations.length) : 0;
+  const requiredAvg = dedupedEvaluations.length ? Math.round(dedupedEvaluations.reduce((s, r) => s + r.required, 0) / dedupedEvaluations.length) : 0;
   const gapPct = Math.max(0, requiredAvg - overall);
 
-  const missing = evaluations.filter((r) => r.score < 40);
-  const weak = evaluations.filter((r) => r.score >= 40 && r.score < r.required);
-  const strong = evaluations.filter((r) => r.score >= r.required);
+  const missing = dedupedEvaluations.filter((r) => r.score < 40);
+  const weak = dedupedEvaluations.filter((r) => r.score >= 40 && r.score < r.required);
+  const strong = dedupedEvaluations.filter((r) => r.score >= r.required);
 
   return (
     <div className="min-h-screen bg-background">
@@ -901,7 +924,7 @@ ${enhancement.suggested_changes
               <div className="card-glass rounded-2xl p-6">
                 <h2 className="mb-6 font-display text-xl font-semibold">Skill Breakdown</h2>
                 <div className="space-y-5">
-                  {evaluations.map((r) => (
+                  {dedupedEvaluations.map((r) => (
                     <div key={r.skill}>
                       <div className="mb-2 flex items-center justify-between text-sm">
                         <span className="font-medium">{r.skill}</span>
